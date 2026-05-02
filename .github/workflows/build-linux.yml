@@ -264,67 +264,82 @@ jobs:
 
           ./configure \
             --prefix="$PREFIX" \
+            \
             --disable-autodetect \
             --disable-everything \
             --enable-gpl \
+            \
             --enable-muxer=mp4 \
             --enable-muxer=matroska \
             --enable-muxer=mov \
             --enable-muxer=webm \
+            \
             --enable-libx264 \
             --enable-encoder=libx264 \
             --enable-encoder=libx264rgb \
             --enable-parser=h264 \
             --enable-parser=hevc \
+            \
             --enable-libvpx \
             --enable-encoder=libvpx_vp8 \
             --enable-parser=vp8 \
             --enable-encoder=libvpx_vp9 \
             --enable-parser=vp9 \
+            \
             --enable-libsvtav1 \
             --enable-encoder=libsvtav1 \
             --enable-parser=av1 \
+            \
             --enable-libmp3lame \
             --enable-encoder=aac \
             --enable-encoder=libmp3lame \
             --enable-parser=aac \
             --enable-parser=mpegaudio \
+            \
             --enable-encoder=flac \
             --enable-parser=flac \
+            \
             --enable-libopus \
             --enable-encoder=libopus \
             --enable-parser=opus \
+            \
             --enable-libvorbis \
             --enable-encoder=libvorbis \
             --enable-parser=vorbis \
+            \
             --enable-decoder=rawvideo \
             --enable-demuxer=rawvideo \
             --enable-decoder=pcm_s16le \
             --enable-demuxer=pcm_s16le \
             --enable-decoder=pcm_f32le \
             --enable-demuxer=pcm_f32le \
+            \
             --enable-bsf=h264_mp4toannexb \
             --enable-bsf=aac_adtstoasc \
+            \
             --enable-filter=format \
             --enable-filter=hwupload \
             --enable-filter=scale \
+            \
             --enable-protocol=pipe \
             --enable-protocol=file \
             --enable-protocol=unix \
+            \
             --enable-pthreads \
+            \
             --enable-vaapi \
-            --enable-encoder=av1_vaapi \            
-            --enable-encoder=h264_vaapi \
-            --enable-encoder=hevc_vaapi \
-            --enable-encoder=vp8_vaapi \
-            --enable-encoder=vp9_vaapi \
+            --enable-hwaccel=h264_vaapi \
+            --enable-hwaccel=hevc_vaapi \
+            \
             --enable-ffnvcodec \
             --enable-nvenc \
-            --enable-encoder=av1_nvenc \
             --enable-encoder=h264_nvenc \
             --enable-encoder=hevc_nvenc \
+            \
             --enable-vulkan \
+            \
             --enable-libdrm \
+            \
             --enable-ffmpeg \
             --enable-avcodec \
             --enable-avformat \
@@ -332,6 +347,7 @@ jobs:
             --enable-swscale \
             --enable-swscale-alpha \
             --enable-swresample \
+            \
             --disable-ffplay \
             --disable-ffprobe \
             --disable-debug \
@@ -340,6 +356,7 @@ jobs:
             --disable-manpages \
             --disable-podpages \
             --disable-txtpages \
+            \
             --enable-pic \
             --enable-static \
             --disable-shared \

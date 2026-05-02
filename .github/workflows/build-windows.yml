@@ -70,25 +70,27 @@ jobs:
 
       - name: Prepare build directories
         run: |
-          mkdir "$env:VENDOR"
-          mkdir "$env:PREFIX"
+          mkdir "%VENDOR%"
+          mkdir "%PREFIX%"
 
       - name: Download dependencies
         run: |
-          git init "%VENDOR%\x264"
-          cd "%VENDOR%\x264"
-          git fetch https://code.videolan.org/videolan/x264.git %X264_REVISION% --depth=1
-          git checkout FETCH_HEAD
+          cd /d "%VENDOR%"
 
-          git init "%VENDOR%\libvpx"
-          cd "%VENDOR%\libvpx"
-          git fetch https://chromium.googlesource.com/webm/libvpx %LIBVPX_VERSION% --depth=1
-          git checkout FETCH_HEAD
+          git clone https://code.videolan.org/videolan/x264.git --revision="%X264_REVISION%"" --depth=1
+          git clone https://chromium.googlesource.com/webm/libvpx --revision="%LIBVPX_VERSION%" --depth=1
+          git clone https://gitlab.com/AOMediaCodec/SVT-AV1 --revision="%SVTAV1_VERSION%" --depth=1
 
-          git init "$env:VENDOR\SVT-AV1"
-          cd "$env:VENDOR\SVT-AV1"
-          git fetch https://gitlab.com/AOMediaCodec/SVT-AV1 "$env:SVTAV1_VERSION" --depth=1
-          git checkout FETCH_HEAD
+          curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
+          tar xf opus-%OPUS_VERSION%.tar.gz
+        
+          git clone https://github.com/xiph/ogg.git --revision="%OGG_VERSION%" --depth=1
+          git clone https://github.com/xiph/vorbis.git --revision="%VORBIS_VERSION%" --depth=1
+
+          git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git --revision="%NVCODEC_VERSION%" --depth=1
+          git clone https://github.com/KhronosGroup/Vulkan-Headers.git --revision="%VULKAN_VERSION%" --depth=1
+
+          git clone https://git.ffmpeg.org/ffmpeg.git --revision="%FFMPEG_VERSION%" --depth=1
 
       - name: Build x264
         shell: msys2 {0}
@@ -120,7 +122,7 @@ jobs:
       - name: Build SVT-AV1
         run: |
           cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" \
+            -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
             -DNATIVE=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" \
@@ -141,12 +143,6 @@ jobs:
       - name: Build OPUS
         shell: msys2 {0}
         run: |
-          cd /d "%VENDOR%"
-          curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
-
-          tar xf opus-%OPUS_VERSION%.tar.gz
-          cd opus-%OPUS_VERSION%
-
           ./configure \
             --prefix="%PREFIX%" \
             --enable-custom-modes \
@@ -157,13 +153,8 @@ jobs:
 
       - name: Build OGG
         run: |
-          git init "$env:VENDOR\ogg"
-          cd "$env:VENDOR\ogg"
-          git fetch https://github.com/xiph/ogg.git "$env:OGG_VERSION" --depth=1
-          git checkout FETCH_HEAD
-
           cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" \
+            -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" \
             -DCMAKE_BUILD_TYPE=Release
@@ -173,11 +164,6 @@ jobs:
       - name: Build Vorbis
         shell: msys2 {0}
         run: |
-          git init "%VENDOR%\vorbis"
-          cd "%VENDOR%\vorbis"
-          git fetch https://github.com/xiph/vorbis.git %VORBIS_VERSION% --depth=1
-          git checkout FETCH_HEAD
-
           ./configure \
             --prefix="%PREFIX%" \
             --enable-static \
@@ -189,22 +175,12 @@ jobs:
       - name: Install ffnvcodec-headers
         shell: msys2 {0}
         run: |
-          git init "$env:VENDOR\ffnvcodec-headers"
-          cd "$env:VENDOR\ffnvcodec-headers"
-          git fetch https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$env:NVCODEC_VERSION" --depth=1
-          git checkout FETCH_HEAD
-
-          mingw32-make PREFIX="$env:PREFIX" install
+          mingw32-make PREFIX="%PREFIX%" install
 
       - name: Install vulkan-headers
         run: |
-          git init "$env:VENDOR\vulkan-headers"
-          cd "$env:VENDOR\vulkan-headers"
-          git fetch https://github.com/KhronosGroup/Vulkan-Headers.git "$env:VULKAN_VERSION" --depth=1
-          git checkout FETCH_HEAD
-
           cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" \
+            -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           cmake --install build
@@ -212,11 +188,6 @@ jobs:
       - name: Build FFmpeg
         shell: msys2 {0}
         run: |
-          git init "%VENDOR%\ffmpeg"
-          cd "%VENDOR%\ffmpeg"
-          git fetch https://git.ffmpeg.org/ffmpeg.git %FFMPEG_VERSION% --depth=1
-          git checkout FETCH_HEAD
-
           ./configure \
             --prefix="%PREFIX%" \
             --disable-autodetect \
@@ -296,26 +267,26 @@ jobs:
 
       - name: Create archive
         run: |
-          mkdir -p package
+          mkdir package
           cd package
 
           $files = @(
-            "$env:PREFIX\bin\ffmpeg.exe",
-            "$env:PREFIX\bin\avcodec-*.dll",
-            "$env:PREFIX\bin\avdevice-*.dll",
-            "$env:PREFIX\bin\avfilter-*.dll",
-            "$env:PREFIX\bin\avformat-*.dll",
-            "$env:PREFIX\bin\avutil-*.dll",
-            "$env:PREFIX\bin\swresample-*.dll",
-            "$env:PREFIX\bin\swscale-*.dll",
-            "$env:PREFIX\bin\x264-*.dll",
-            "$env:PREFIX\bin\libvpx.dll",
-            "$env:PREFIX\bin\SvtAv1Enc.dll",
-            "$env:PREFIX\bin\mp3lame.dll",
-            "$env:PREFIX\bin\libopus.dll",
-            "$env:PREFIX\bin\libvorbis.dll",
-            "$env:PREFIX\bin\libvorbisenc.dll",
-            "$env:PREFIX\bin\ogg.dll"
+            "%PREFIX%\bin\ffmpeg.exe",
+            "%PREFIX%\bin\avcodec-*.dll",
+            "%PREFIX%\bin\avdevice-*.dll",
+            "%PREFIX%\bin\avfilter-*.dll",
+            "%PREFIX%\bin\avformat-*.dll",
+            "%PREFIX%\bin\avutil-*.dll",
+            "%PREFIX%\bin\swresample-*.dll",
+            "%PREFIX%\bin\swscale-*.dll",
+            "%PREFIX%\bin\x264-*.dll",
+            "%PREFIX%\bin\libvpx.dll",
+            "%PREFIX%\bin\SvtAv1Enc.dll",
+            "%PREFIX%\bin\mp3lame.dll",
+            "%PREFIX%\bin\libopus.dll",
+            "%PREFIX%\bin\libvorbis.dll",
+            "%PREFIX%\bin\libvorbisenc.dll",
+            "%PREFIX%\bin\ogg.dll"
           )
 
           foreach ($file in $files) {
