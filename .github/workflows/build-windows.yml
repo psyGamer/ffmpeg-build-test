@@ -70,13 +70,12 @@ jobs:
 
       - name: Prepare build directories
         run: |
-          mkdir "%VENDOR%"
-          mkdir "%PREFIX%"
+          mkdir ${{ env.VENDOR }}
+          mkdir ${{ env.PREFIX }}
 
       - name: Download dependencies
+        working-directory: ${{ env.VENDOR }}
         run: |
-          cd "%VENDOR%"
-
           git clone https://code.videolan.org/videolan/x264.git --revision="${{ env.X264_REVISION }}" --depth=1
           git clone https://chromium.googlesource.com/webm/libvpx --revision="${{ env.LIBVPX_VERSION }}" --depth=1
           git clone https://gitlab.com/AOMediaCodec/SVT-AV1 --revision="${{ env.SVTAV1_VERSION }}" --depth=1
