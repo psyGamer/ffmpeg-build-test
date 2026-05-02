@@ -90,6 +90,27 @@ jobs:
         run: |
           mkdir -p "$VENDOR" "$PREFIX"
 
+      - name: Build libVPL
+        run: |
+          git init "$VENDOR/libvpl"
+          git -C "$VENDOR/libvpl" fetch https://github.com/intel/libvpl.git "$LIBVPL_VERSION" --depth=1
+          git -C "$VENDOR/libvpl" checkout FETCH_HEAD
+          cd "$VENDOR/libvpl"
+
+          CFLAGS="$CFLAGS -DNDEBUG" CXXFLAGS="$CXXFLAGS -DNDEBUG" cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DBUILD_EXAMPLES=OFF \
+            -DINSTALL_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            -Wno-dev
+          cmake --build build
+          cmake --install build
+
+          # Fix not linking C++ standard library
+          sed -i 's/^Libs: -L\${libdir} -lvpl -ldl$/& -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
+
       - name: Build libdrm
         run: |
           git init "$VENDOR/libdrm"
@@ -231,27 +252,6 @@ jobs:
             --disable-shared
           make -j$(nproc)
           make install
-
-      - name: Build libVPL
-        run: |
-          git init "$VENDOR/libvpl"
-          git -C "$VENDOR/libvpl" fetch https://github.com/intel/libvpl.git "$LIBVPL_VERSION" --depth=1
-          git -C "$VENDOR/libvpl" checkout FETCH_HEAD
-          cd "$VENDOR/libvpl"
-
-          CFLAGS="$CFLAGS -DNDEBUG" CXXFLAGS="$CXXFLAGS -DNDEBUG" cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -DBUILD_EXAMPLES=OFF \
-            -DINSTALL_EXAMPLES=OFF \
-            -DBUILD_TESTS=OFF \
-            -Wno-dev
-          cmake --build build
-          cmake --install build
-
-          # Fix not linking C++ standard library
-          sed -i 's/^Libs: -L\${libdir} -lvpl -ldl$/& -lstdc++/' ${{ env.PKG_CONFIG_PATH }}/vpl.pc
 
       - name: Install ffnvcodec-headers
         run: |
