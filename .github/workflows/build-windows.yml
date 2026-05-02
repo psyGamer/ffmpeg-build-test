@@ -67,6 +67,11 @@ jobs:
           install: >-
             mingw-w64-${{ matrix.msys2_env }}-cc
             mingw-w64-${{ matrix.msys2_env }}-make
+            mingw-w64-${{ matrix.msys2_env }}-cmake
+            mingw-w64-${{ matrix.msys2_env }}-ninja
+            mingw-w64-${{ matrix.msys2_env }}-pkg-config
+            mingw-w64-${{ matrix.msys2_env }}-nasm
+            mingw-w64-${{ matrix.msys2_env }}-yasm  
 
       - name: Prepare build directories
         run: |
