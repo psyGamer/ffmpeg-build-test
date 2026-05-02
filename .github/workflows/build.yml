@@ -1,0 +1,325 @@
+name: Build FFmpeg
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:buster-slim
+    env:
+      VENDOR: ${{ github.workspace }}/vendor-musl
+      PREFIX: ${{ github.workspace }}/install-musl
+
+      OPUS_VERSION: 1.6.1
+      OPUS_SHA256: 6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1
+
+      LAME_VERSION: 3.100
+      LAME_SHA256: ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1
+
+      X264_REVISION: b35605ace3ddf7c1a5d67a2eb553f034aef41d55
+      LIBVPX_VERSION: v1.16.0
+      SVTAV1_VERSION: v4.1.0
+      OGG_VERSION: v1.3.6
+      VORBIS_VERSION: v1.3.7
+      LIBDRM_VERSION: libdrm-2.4.133
+      LIBVA_VERSION: 2.23.0
+      NVCODEC_VERSION: n13.0.19.0
+      VULKAN_VERSION: vulkan-sdk-1.4.341.0
+      FFMPEG_VERSION: n8.1
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential \
+            gcc \
+            g++ \
+            git \
+            curl \
+            ca-certificates \
+            pkg-config \
+            libtool-bin \
+            autoconf \
+            automake \
+            cmake \
+            ninja-build \
+            meson \
+            yasm \
+            nasm \
+            sha256sum
+
+      - name: Prepare build directories
+        run: |
+          mkdir -p "$VENDOR" "$PREFIX"
+
+      - name: Build x264
+        run: |
+          git clone https://code.videolan.org/videolan/x264.git "$VENDOR/x264" --depth=1 --revision="$X264_REVISION"
+          cd "$VENDOR/x264"
+
+          ./configure \
+            --prefix="$PREFIX" \
+            --enable-static \
+            --enable-pic \
+            --disable-opencl \
+            --disable-cli
+          make -j$(nproc)
+          make install
+
+      - name: Build libvpx
+        run: |
+          git clone https://chromium.googlesource.com/webm/libvpx "$VENDOR/libvpx" --depth=1 --revision="$LIBVPX_REVISION"
+          cd "$VENDOR/libvpx"
+
+          ./configure \
+            --prefix="$PREFIX" \
+            --enable-vp8 \
+            --enable-vp9 \
+            --enable-static \
+            --enable-pic \
+            --disable-examples \
+            --disable-unit-tests
+          make -j$(nproc)
+          make install
+
+      - name: Build SVT-AV1
+        run: |
+          git clone https://gitlab.com/AOMediaCodec/SVT-AV1 "$VENDOR/SVT-AV1" --depth=1 --revision="$SVTAV1_REVISION"
+          cd "$VENDOR/SVT-AV1"
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DNATIVE=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          cmake --build build
+          cmake --install build
+
+      - name: Build LAME
+        run: |
+          curl --output-dir "$VENDOR" -LO https://deac-ams.dl.sourceforge.net/project/lame/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz
+          echo "$LAME_SHA256 $VENDOR/lame-${LAME_VERSION}.tar.gz" | sha256sum -c
+
+          tar xf "$VENDOR/lame-${LAME_VERSION}.tar.gz" -C "$VENDOR"
+          cd "$VENDOR/lame-${LAME_VERSION}"
+
+          ./configure \
+            --prefix="$PREFIX" \
+            --enable-static \
+            --enable-pic \
+            --disable-shared
+          make -j$(nproc)
+          make install
+
+      - name: Build OPUS
+        run: |
+          curl --output-dir "$VENDOR" -LO https://downloads.xiph.org/releases/opus/opus-${OPUS_VERSION}.tar.gz
+          echo "$OPUS_SHA256 $VENDOR/opus-${OPUS_VERSION}.tar.gz" | sha256sum -c
+
+          tar xf "$VENDOR/opus-${OPUS_VERSION}.tar.gz" -C "$VENDOR"
+          cd "$VENDOR/opus-${OPUS_VERSION}"
+
+          ./configure \
+            --prefix="$PREFIX" \
+            --enable-custom-modes \
+            --enable-static \
+            --enable-pic \
+            --disable-shared
+          make -j$(nproc)
+          make install
+
+      - name: Build OGG
+        run: |
+          git clone https://github.com/xiph/ogg "$VENDOR/ogg" --depth=1 --revision="$OGG_VERSION"
+          cd "$VENDOR/ogg"
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          cmake --build build
+          cmake --install build
+
+      - name: Build Vorbis
+        run: |
+          git clone https://github.com/xiph/vorbis "$VENDOR/vorbis" --depth=1 --revision="$VORBIS_VERSION"
+          cd "$VENDOR/vorbis"
+
+          ./autogen.sh
+          ./configure \
+            --prefix="$PREFIX" \
+            --enable-static \
+            --enable-pic \
+            --disable-shared
+          make -j$(nproc)
+          make install
+
+      - name: Build libdrm
+        run: |
+          git clone https://gitlab.freedesktop.org/mesa/libdrm.git "$VENDOR/libdrm" --depth=1 --revision="$LIBDRM_REVISION"
+          cd "$VENDOR/libdrm"
+
+          meson setup build \
+            --default-library=static \
+            -Dprefix="$PREFIX" \
+            -Dudev=true \
+            -Dvalgrind=disabled
+          ninja -C build
+          ninja -C build install
+
+      - name: Build libVA
+        run: |
+          git clone https://github.com/intel/libva.git "$VENDOR/libva" --depth=1 --revision="$LIBVA_VERSION"
+          cd "$VENDOR/libva"
+
+          ./autogen.sh \
+            --prefix="$PREFIX" \
+            --enable-static \
+            --disable-shared
+          make -j$(nproc)
+          make install
+
+      - name: Download and install ffnvcodec-headers
+        run: |
+          git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$VENDOR/ffnvcodec-headers" --depth=1 --revision="$NVCODEC_VERSION"
+          cd "$VENDOR/ffnvcodec-headers"
+
+          make PREFIX="$PREFIX"
+          make PREFIX="$PREFIX" install
+
+      - name: Download and install vulkan-headers
+        run: |
+          git clone https://github.com/KhronosGroup/Vulkan-Headers.git "$VENDOR/vulkan-headers" --depth=1 --revision="$VULKAN_VERSION"
+          cd "$VENDOR/vulkan-headers"
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DCMAKE_SKIP_INSTALL_RPATH=ON \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          cmake --build build
+          cmake --install build
+
+      - name: Build FFmpeg
+        run: |
+          git clone https://git.ffmpeg.org/ffmpeg.git "$VENDOR/ffmpeg" --depth=1 --revision="$FFMPEG_VERSION"
+          cd "$VENDOR/ffmpeg"
+
+          ./configure \
+            --prefix="$PREFIX" \
+            --disable-autodetect \
+            --disable-everything \
+            --enable-gpl \
+            --enable-muxer=mp4 \
+            --enable-muxer=matroska \
+            --enable-muxer=mov \
+            --enable-muxer=webm \
+            --enable-libx264 \
+            --enable-encoder=libx264 \
+            --enable-encoder=libx264rgb \
+            --enable-parser=h264 \
+            --enable-parser=hevc \
+            --enable-libvpx \
+            --enable-encoder=libvpx_vp8 \
+            --enable-parser=vp8 \
+            --enable-encoder=libvpx_vp9 \
+            --enable-parser=vp9 \
+            --enable-libsvtav1 \
+            --enable-encoder=libsvtav1 \
+            --enable-parser=av1 \
+            --enable-libmp3lame \
+            --enable-encoder=aac \
+            --enable-encoder=libmp3lame \
+            --enable-parser=aac \
+            --enable-parser=mpegaudio \
+            --enable-encoder=flac \
+            --enable-parser=flac \
+            --enable-libopus \
+            --enable-encoder=libopus \
+            --enable-parser=opus \
+            --enable-libvorbis \
+            --enable-encoder=libvorbis \
+            --enable-parser=vorbis \
+            --enable-decoder=rawvideo \
+            --enable-demuxer=rawvideo \
+            --enable-decoder=pcm_s16le \
+            --enable-demuxer=pcm_s16le \
+            --enable-bsf=h264_mp4toannexb \
+            --enable-bsf=aac_adtstoasc \
+            --enable-filter=format \
+            --enable-filter=hwupload \
+            --enable-filter=scale \
+            --enable-protocol=pipe \
+            --enable-protocol=file \
+            --enable-protocol=unix \
+            --enable-pthreads \
+            --enable-vaapi \
+            --enable-hwaccel=h264_vaapi \
+            --enable-hwaccel=hevc_vaapi \
+            --enable-ffnvcodec \
+            --enable-nvenc \
+            --enable-encoder=h264_nvenc \
+            --enable-encoder=hevc_nvenc \
+            --enable-vulkan \
+            --enable-libdrm \
+            --enable-ffmpeg \
+            --enable-avcodec \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-swscale \
+            --enable-swscale-alpha \
+            --enable-swresample \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --disable-debug \
+            --disable-doc \
+            --disable-htmlpages \
+            --disable-manpages \
+            --disable-podpages \
+            --disable-txtpages \
+            --enable-pic \
+            --enable-static \
+            --disable-shared \
+            --disable-asm \
+            --pkg-config-flags="--static" \
+            --extra-cflags="-I$PREFIX/include -fPIC" \
+            --extra-ldflags="-L$PREFIX/lib" \
+            --extra-libs="-lm"
+          make -j$(nproc)
+          make install
+
+      - name: Create libffmpeg.so shim
+        run: |
+          gcc \
+            -shared \
+            -o libffmpeg.so \
+            -Wl,--allow-multiple-definition \
+            -Wl,--whole-archive \
+              "$PREFIX/lib/libavformat.a" \
+              "$PREFIX/lib/libavcodec.a" \
+              "$PREFIX/lib/libavutil.a" \
+              "$PREFIX/lib/libswresample.a" \
+              "$PREFIX/lib/libswscale.a" \
+              "$PREFIX/lib/libx264.a" \
+              "$PREFIX/lib/libvpx.a" \
+              "$PREFIX/lib/libSvtAv1Enc.a" \
+              "$PREFIX/lib/libopus.a" \
+              "$PREFIX/lib/libvorbis.a" \
+              "$PREFIX/lib/libvorbisenc.a" \
+              "$PREFIX/lib/libvorbisfile.a" \
+              "$PREFIX/lib/libogg.a" \
+              "$PREFIX/lib/libmp3lame.a" \
+            -Wl,--no-whole-archive \
+            -lm -lpthread
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-build-artifacts
+          path: |
+            libffmpeg.so
+            $PREFIX/bin/ffmpeg
