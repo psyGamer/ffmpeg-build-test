@@ -16,7 +16,7 @@ jobs:
       OPUS_SHA256: 6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1
 
       LAME_VERSION: "3.100"
-      LAME_SHA256: ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1
+      LAME_SHA256: ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e
 
       X264_REVISION: b35605ace3ddf7c1a5d67a2eb553f034aef41d55
       LIBVPX_VERSION: v1.16.0
@@ -69,24 +69,6 @@ jobs:
         run: |
           mkdir -p "$VENDOR" "$PREFIX"
 
-      - name: Build LAME
-        run: |
-          set -e
-          curl --output-dir "$VENDOR" -LO https://deac-ams.dl.sourceforge.net/project/lame/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz
-          echo "$LAME_SHA256 $VENDOR/lame-${LAME_VERSION}.tar.gz"
-          echo "$LAME_SHA256 $VENDOR/lame-${LAME_VERSION}.tar.gz" | sha256sum -c
-
-          tar xf "$VENDOR/lame-${LAME_VERSION}.tar.gz" -C "$VENDOR"
-          cd "$VENDOR/lame-${LAME_VERSION}"
-
-          ./configure \
-            --prefix="$PREFIX" \
-            --enable-static \
-            --enable-pic \
-            --disable-shared
-          make -j$(nproc)
-          make install
-
       - name: Build x264
         run: |
           git init "$VENDOR/x264"
@@ -135,6 +117,22 @@ jobs:
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON
           cmake --build build
           cmake --install build
+
+      - name: Build LAME
+        run: |
+          curl --output-dir "$VENDOR" -LO https://deac-ams.dl.sourceforge.net/project/lame/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz
+          echo "$LAME_SHA256 $VENDOR/lame-${LAME_VERSION}.tar.gz" | sha256sum -c
+
+          tar xf "$VENDOR/lame-${LAME_VERSION}.tar.gz" -C "$VENDOR"
+          cd "$VENDOR/lame-${LAME_VERSION}"
+
+          ./configure \
+            --prefix="$PREFIX" \
+            --enable-static \
+            --enable-pic \
+            --disable-shared
+          make -j$(nproc)
+          make install
 
       - name: Build OPUS
         run: |
