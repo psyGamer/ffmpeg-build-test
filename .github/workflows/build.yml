@@ -103,21 +103,6 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Build SVT-AV1
-        run: |
-          git init "$VENDOR/SVT-AV1"
-          git -C "$VENDOR/SVT-AV1" fetch https://gitlab.com/AOMediaCodec/SVT-AV1 "$SVTAV1_REVISION" --depth=1
-          git -C "$VENDOR/SVT-AV1" checkout FETCH_HEAD
-          cd "$VENDOR/SVT-AV1"
-
-          cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-            -DNATIVE=OFF \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-          cmake --build build
-          cmake --install build
-
       - name: Build LAME
         run: |
           curl --output-dir "$VENDOR" -LO https://deac-ams.dl.sourceforge.net/project/lame/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz
@@ -231,6 +216,21 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$PREFIX" \
             -DCMAKE_SKIP_INSTALL_RPATH=ON \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          cmake --build build
+          cmake --install build
+
+      - name: Build SVT-AV1
+        run: |
+          git init "$VENDOR/SVT-AV1"
+          git -C "$VENDOR/SVT-AV1" fetch https://gitlab.com/AOMediaCodec/SVT-AV1 "$SVTAV1_REVISION" --depth=1
+          git -C "$VENDOR/SVT-AV1" checkout FETCH_HEAD
+          cd "$VENDOR/SVT-AV1"
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DNATIVE=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON
           cmake --build build
