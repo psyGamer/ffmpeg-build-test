@@ -202,6 +202,7 @@ jobs:
 
       - name: Build libVPL
         run: |
+          set -e
           git init "$VENDOR/libvpl"
           git -C "$VENDOR/libvpl" fetch https://github.com/intel/libvpl.git "$LIBVPL_VERSION" --depth=1
           git -C "$VENDOR/libvpl" checkout FETCH_HEAD
@@ -258,10 +259,13 @@ jobs:
 
       - name: Build FFmpeg
         run: |
+          set -e
           git init "$VENDOR/ffmpeg"
           git -C "$VENDOR/ffmpeg" fetch https://git.ffmpeg.org/ffmpeg.git "$FFMPEG_VERSION" --depth=1
           git -C "$VENDOR/ffmpeg" checkout FETCH_HEAD
           cd "$VENDOR/ffmpeg"
+
+          cat $PREFIX/lib/pkgconfig/vpl.pc | :
 
           ./configure \
             --prefix="$PREFIX" \
@@ -370,7 +374,8 @@ jobs:
             --pkg-config-flags="--static" \
             --extra-cflags="-I$PREFIX/include -fPIC" \
             --extra-ldflags="-L$PREFIX/lib" \
-            --extra-libs="-lm"
+            --extra-libs="-lm" | :
+          cat ffbuild/config.log
           make -j$(nproc)
           make install
 
