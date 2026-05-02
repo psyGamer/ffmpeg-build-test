@@ -265,8 +265,6 @@ jobs:
           git -C "$VENDOR/ffmpeg" checkout FETCH_HEAD
           cd "$VENDOR/ffmpeg"
 
-          cat $PREFIX/lib/pkgconfig/vpl.pc | :
-
           ./configure \
             --prefix="$PREFIX" \
             \
@@ -374,8 +372,7 @@ jobs:
             --pkg-config-flags="--static" \
             --extra-cflags="-I$PREFIX/include -fPIC" \
             --extra-ldflags="-L$PREFIX/lib" \
-            --extra-libs="-lm" | :
-          cat ffbuild/config.log
+            --extra-libs="-lm"
           make -j$(nproc)
           make install
 
