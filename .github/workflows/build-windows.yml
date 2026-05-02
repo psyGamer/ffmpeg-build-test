@@ -73,6 +73,8 @@ jobs:
             mingw-w64-${{ matrix.msys2_env }}-nasm
             mingw-w64-${{ matrix.msys2_env }}-yasm
             mingw-w64-${{ matrix.msys2_env }}-diffutils
+            mingw-w64-${{ matrix.msys2_env }}-libtool
+            mingw-w64-${{ matrix.msys2_env }}-autotools
 
       - name: Prepare build directories
         run: |
