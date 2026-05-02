@@ -23,8 +23,6 @@ jobs:
       SVTAV1_VERSION: v4.1.0
       OGG_VERSION: v1.3.6
       VORBIS_VERSION: v1.3.7
-      LIBDRM_VERSION: libdrm-2.4.133
-      LIBVA_VERSION: 2.23.0
       LIBVPL_VERSION: v2.16.0
       NVCODEC_VERSION: n13.0.19.0
       AMF_VERSION: v1.5.0
@@ -89,57 +87,6 @@ jobs:
       - name: Prepare build directories
         run: |
           mkdir -p "$VENDOR" "$PREFIX"
-
-      - name: Build libVPL
-        run: |
-          git init "$VENDOR/libvpl"
-          git -C "$VENDOR/libvpl" fetch https://github.com/intel/libvpl.git "$LIBVPL_VERSION" --depth=1
-          git -C "$VENDOR/libvpl" checkout FETCH_HEAD
-          cd "$VENDOR/libvpl"
-
-          CFLAGS="$CFLAGS -DNDEBUG" CXXFLAGS="$CXXFLAGS -DNDEBUG" cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -DBUILD_EXAMPLES=OFF \
-            -DINSTALL_EXAMPLES=OFF \
-            -DBUILD_TESTS=OFF \
-            -Wno-dev
-          cmake --build build
-          cmake --install build
-
-          # Fix not linking C++ standard library
-          sed -i 's/^Libs: -L\${libdir} -lvpl -ldl$/& -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
-
-      - name: Build libdrm
-        run: |
-          git init "$VENDOR/libdrm"
-          git -C "$VENDOR/libdrm" fetch https://gitlab.freedesktop.org/mesa/libdrm.git "$LIBDRM_REVISION" --depth=1
-          git -C "$VENDOR/libdrm" checkout FETCH_HEAD
-          cd "$VENDOR/libdrm"
-
-          meson setup build \
-            --default-library=static \
-            -Dprefix="$PREFIX" \
-            -Dlibdir="$PREFIX/lib" \
-            -Dudev=true \
-            -Dvalgrind=disabled
-          ninja -C build
-          ninja -C build install
-
-      - name: Build libVA
-        run: |
-          git init "$VENDOR/libva"
-          git -C "$VENDOR/libva" fetch https://github.com/intel/libva.git "$LIBVA_VERSION" --depth=1
-          git -C "$VENDOR/libva" checkout FETCH_HEAD
-          cd "$VENDOR/libva"
-
-          ./autogen.sh \
-            --prefix="$PREFIX" \
-            --enable-static \
-            --disable-shared
-          make -j$(nproc)
-          make install
 
       - name: Build x264
         run: |
@@ -253,6 +200,27 @@ jobs:
           make -j$(nproc)
           make install
 
+      - name: Build libVPL
+        run: |
+          git init "$VENDOR/libvpl"
+          git -C "$VENDOR/libvpl" fetch https://github.com/intel/libvpl.git "$LIBVPL_VERSION" --depth=1
+          git -C "$VENDOR/libvpl" checkout FETCH_HEAD
+          cd "$VENDOR/libvpl"
+
+          CFLAGS="$CFLAGS -DNDEBUG" CXXFLAGS="$CXXFLAGS -DNDEBUG" cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DBUILD_EXAMPLES=OFF \
+            -DINSTALL_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            -Wno-dev
+          cmake --build build
+          cmake --install build
+
+          # Fix not linking C++ standard library
+          sed -i 's/^Libs: -L\${libdir} -lvpl -ldl$/& -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
+
       - name: Install ffnvcodec-headers
         run: |
           git init "$VENDOR/ffnvcodec-headers"
@@ -266,7 +234,7 @@ jobs:
       - name: Install amf-headers
         run: |
           git init "$VENDOR/amf-headers"
-          git -C "$VENDOR/amf-headers" fetch https://github.com/GPUOpen-Frameworks/AMF.git "$AMF_VERSION" --depth=1
+          git -C "$VENDOR/amf-headers" fetch https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git "$AMF_VERSION" --depth=1
           git -C "$VENDOR/amf-headers" checkout FETCH_HEAD
           cd "$VENDOR/amf-headers"
 
@@ -377,8 +345,6 @@ jobs:
             --enable-vulkan \
             --enable-encoder=h264_vulkan \
             --enable-encoder=hevc_vulkan \
-            \
-            --enable-libdrm \
             \
             --enable-ffmpeg \
             --enable-avcodec \
