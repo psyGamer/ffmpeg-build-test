@@ -25,12 +25,15 @@ jobs:
       VORBIS_VERSION: v1.3.7
       LIBDRM_VERSION: libdrm-2.4.133
       LIBVA_VERSION: 2.23.0
+      LIBVPL_VERSION: v2.16.0
       NVCODEC_VERSION: n13.0.19.0
+      AMF_VERSION: v1.5.0
       VULKAN_VERSION: vulkan-sdk-1.4.341.0
       FFMPEG_VERSION: n8.1
 
       CC: gcc
       CFLAGS: -fPIC
+      CXXFlags: -fPIC
 
       PKG_CONFIG_PATH: ${{ github.workspace }}/install/lib/pkgconfig
       PKG_CONFIG: pkg-config --static
@@ -229,6 +232,29 @@ jobs:
           make -j$(nproc)
           make install
 
+      - name: Build libVPL
+        run: |
+          git init "$VENDOR/libvpl"
+          git -C "$VENDOR/libvpl" fetch https://github.com/intel/libvpl.git "$LIBVPL_VERSION" --depth=1
+          git -C "$VENDOR/libvpl" checkout FETCH_HEAD
+          cd "$VENDOR/libvpl"
+
+          export CFLAGS+=' -DNDEBUG'
+          export CXXFLAGS+=' -DNDEBUG'
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DBUILD_EXAMPLES=OFF \
+            -DINSTALL_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            -Wno-dev
+          cmake --build build
+          cmake --install build
+
+          # Fix not linking C++ standard library
+          sed -i 's/^Libs: -L\${libdir} -lvpl -ldl$/& -lstdc++/' ${{ env.PKG_CONFIG_PATH }}/vpl.pc
+
       - name: Install ffnvcodec-headers
         run: |
           git init "$VENDOR/ffnvcodec-headers"
@@ -238,6 +264,15 @@ jobs:
 
           make PREFIX="$PREFIX"
           make PREFIX="$PREFIX" install
+
+      - name: Install amf-headers
+        run: |
+          git init "$VENDOR/amf-headers"
+          git -C "$VENDOR/amf-headers" fetch https://github.com/GPUOpen-Frameworks/AMF.git "$AMF_VERSION" --depth=1
+          git -C "$VENDOR/amf-headers" checkout FETCH_HEAD
+          cd "$VENDOR/amf-headers"
+
+          cp -r amf/public/include "$PREFIX/include/AMF"
 
       - name: Install vulkan-headers
         run: |
@@ -328,16 +363,22 @@ jobs:
             \
             --enable-pthreads \
             \
-            --enable-vaapi \
-            --enable-hwaccel=h264_vaapi \
-            --enable-hwaccel=hevc_vaapi \
+            --enable-libvpl \
+            --enable-encoder=h264_qsv \
+            --enable-encoder=hevc_qsv \
             \
             --enable-ffnvcodec \
             --enable-nvenc \
             --enable-encoder=h264_nvenc \
             --enable-encoder=hevc_nvenc \
             \
+            --enable-amf \
+            --enable-encoder=h264_amf \
+            --enable-encoder=hevc_amf \
+            \
             --enable-vulkan \
+            --enable-encoder=h264_vulkan \
+            --enable-encoder=hevc_vulkan \
             \
             --enable-libdrm \
             \
@@ -381,6 +422,7 @@ jobs:
               "$PREFIX/lib/libavutil.a" \
               "$PREFIX/lib/libswresample.a" \
               "$PREFIX/lib/libswscale.a" \
+              \
               "$PREFIX/lib/libx264.a" \
               "$PREFIX/lib/libvpx.a" \
               "$PREFIX/lib/libSvtAv1Enc.a" \
@@ -390,6 +432,7 @@ jobs:
               "$PREFIX/lib/libvorbisfile.a" \
               "$PREFIX/lib/libogg.a" \
               "$PREFIX/lib/libmp3lame.a" \
+              "$PREFIX/lib/libvpl.a" \
             -Wl,--no-whole-archive \
             -lm -lpthread
 

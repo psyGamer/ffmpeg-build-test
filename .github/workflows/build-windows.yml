@@ -119,10 +119,9 @@ jobs:
         working-directory: ${{ env.VENDOR }}\libvpx
         shell: msys2 {0}
         run: |
-          set LIBVPX_TARGET=${{ matrix.arch == 'x86' && 'x86-win32-vs16' || 'x86_64-win64-vs16' }}
           ./configure \
             --prefix="${{ env.PREFIX }}" \
-            --target=!LIBVPX_TARGET! \
+            --target=${{ matrix.arch == 'x86' && 'x86-win32-vs16' || 'x86_64-win64-vs16' }} \
             --enable-vp8 \
             --enable-vp9 \
             --enable-static \
