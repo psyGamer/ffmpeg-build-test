@@ -239,9 +239,7 @@ jobs:
           git -C "$VENDOR/libvpl" checkout FETCH_HEAD
           cd "$VENDOR/libvpl"
 
-          export CFLAGS+=' -DNDEBUG'
-          export CXXFLAGS+=' -DNDEBUG'
-          cmake -S . -B build -G Ninja \
+          CFLAGS="$CFLAGS -DNDEBUG" CXXFLAGS="$CXXFLAGS -DNDEBUG" cmake -S . -B build -G Ninja \
             -DCMAKE_INSTALL_PREFIX="$PREFIX" \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
