@@ -48,6 +48,7 @@ jobs:
             git \
             gcc \
             g++ \
+            zip \
             ca-certificates \
             pkg-config \
             libtool-bin \
