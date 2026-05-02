@@ -368,10 +368,20 @@ jobs:
             -Wl,--no-whole-archive \
             -lm -lpthread
 
-      - name: Upload build artifacts
+      - name: Create archive
+        run: |
+          mkdir -p package
+          cd package
+
+          cp libffmpeg.so "$PREFIX/bin/ffmpeg" .
+          zip ffmpeg-linux-x86_64.zip libffmpeg.so ffmpeg
+
+          md5sum ffmpeg
+          md5sum libffmpeg.so
+          md5sum ffmpeg-linux-x86_64.zip
+
+      - name: Upload archive
         uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-build-artifacts
-          path: |
-            libffmpeg.so
-            $PREFIX/bin/ffmpeg
+          path: package/ffmpeg-linux-x86_64.zip
+          archive: false
