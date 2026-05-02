@@ -109,7 +109,7 @@ jobs:
             --enable-pic \
             --disable-opencl \
             --disable-cli
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make -j$(nproc)
           mingw32-make install
 
       - name: Build libvpx
@@ -125,7 +125,7 @@ jobs:
             --enable-static \
             --disable-examples \
             --disable-unit-tests
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make -j$(nproc)
           mingw32-make install
 
       - name: Build SVT-AV1
@@ -148,7 +148,7 @@ jobs:
             --prefix="${{ env.PREFIX }}" \
             --enable-static \
             --disable-shared
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make -j$(nproc)
           mingw32-make install
 
       - name: Build OPUS
@@ -160,7 +160,7 @@ jobs:
             --enable-custom-modes \
             --enable-static \
             --disable-shared
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make -j$(nproc)
           mingw32-make install
 
       - name: Build OGG
@@ -183,7 +183,7 @@ jobs:
             --enable-static \
             --disable-shared
 
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make -j$(nproc)
           mingw32-make install
 
       - name: Install ffnvcodec-headers
@@ -279,7 +279,7 @@ jobs:
             --extra-cflags="-I${{ env.PREFIX }}\include" \
             --extra-ldflags="-L${{ env.PREFIX }}\lib" \
             --extra-libs="kernel32.lib"
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make -j$(nproc)
           mingw32-make install
 
       - name: Create archive
