@@ -52,8 +52,7 @@ jobs:
             ninja-build \
             meson \
             yasm \
-            nasm \
-            sha256sum
+            nasm
 
       - name: Prepare build directories
         run: |
