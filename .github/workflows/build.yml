@@ -39,6 +39,7 @@ jobs:
           apt-get install -y --no-install-recommends \
             coreutils \
             build-essential \
+            git \
             gcc \
             g++ \
             curl \
@@ -52,7 +53,7 @@ jobs:
             yasm \
             nasm
 
-          # Setup Debian Bullseye PPA for newer Git and CMake versions
+          # Setup Debian Bullseye PPA for newer CMake version
           echo "deb http://deb.debian.org/debian bullseye main" >> /etc/apt/sources.list
           echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
           echo "deb http://archive.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
@@ -63,7 +64,7 @@ jobs:
           EOF
 
           apt-get update
-          apt-get install -y -t bullseye git cmake
+          apt-get install -y -t bullseye cmake
 
       - name: Prepare build directories
         run: |
@@ -71,7 +72,9 @@ jobs:
 
       - name: Build x264
         run: |
-          git clone https://code.videolan.org/videolan/x264.git "$VENDOR/x264" --depth=1 --revision="$X264_REVISION"
+          git init "$VENDOR/x264"
+          git -C "$VENDOR/x264" fetch https://code.videolan.org/videolan/x264.git $X264_REVISION --depth=1
+          git -C "$VENDOR/x264" checkout FETCH_HEAD
           cd "$VENDOR/x264"
 
           ./configure \
@@ -85,7 +88,9 @@ jobs:
 
       - name: Build libvpx
         run: |
-          git clone https://chromium.googlesource.com/webm/libvpx "$VENDOR/libvpx" --depth=1 --revision="$LIBVPX_REVISION"
+          git init "$VENDOR/libvpx"
+          git -C "$VENDOR/libvpx" fetch https://chromium.googlesource.com/webm/libvpx "$LIBVPX_REVISION" --depth=1
+          git -C "$VENDOR/libvpx" checkout FETCH_HEAD
           cd "$VENDOR/libvpx"
 
           ./configure \
@@ -101,7 +106,9 @@ jobs:
 
       - name: Build SVT-AV1
         run: |
-          git clone https://gitlab.com/AOMediaCodec/SVT-AV1 "$VENDOR/SVT-AV1" --depth=1 --revision="$SVTAV1_REVISION"
+          git init "$VENDOR/SVT-AV1"
+          git -C "$VENDOR/SVT-AV1" fetch https://gitlab.com/AOMediaCodec/SVT-AV1 "$SVTAV1_REVISION" --depth=1
+          git -C "$VENDOR/SVT-AV1" checkout FETCH_HEAD
           cd "$VENDOR/SVT-AV1"
 
           cmake -S . -B build -G Ninja \
@@ -147,7 +154,9 @@ jobs:
 
       - name: Build OGG
         run: |
-          git clone https://github.com/xiph/ogg "$VENDOR/ogg" --depth=1 --revision="$OGG_VERSION"
+          git init "$VENDOR/ogg"
+          git -C "$VENDOR/ogg" fetch https://github.com/xiph/ogg.git "$OGG_VERSION" --depth=1
+          git -C "$VENDOR/ogg" checkout FETCH_HEAD
           cd "$VENDOR/ogg"
 
           cmake -S . -B build -G Ninja \
@@ -159,7 +168,9 @@ jobs:
 
       - name: Build Vorbis
         run: |
-          git clone https://github.com/xiph/vorbis "$VENDOR/vorbis" --depth=1 --revision="$VORBIS_VERSION"
+          git init "$VENDOR/vorbis"
+          git -C "$VENDOR/vorbis" fetch https://github.com/xiph/vorbis.git "$VORBIS_VERSION" --depth=1
+          git -C "$VENDOR/vorbis" checkout FETCH_HEAD
           cd "$VENDOR/vorbis"
 
           ./autogen.sh
@@ -173,7 +184,9 @@ jobs:
 
       - name: Build libdrm
         run: |
-          git clone https://gitlab.freedesktop.org/mesa/libdrm.git "$VENDOR/libdrm" --depth=1 --revision="$LIBDRM_REVISION"
+          git init "$VENDOR/libdrm"
+          git -C "$VENDOR/libdrm" fetch https://gitlab.freedesktop.org/mesa/libdrm.git "$LIBDRM_REVISION" --depth=1
+          git -C "$VENDOR/libdrm" checkout FETCH_HEAD
           cd "$VENDOR/libdrm"
 
           meson setup build \
@@ -186,7 +199,9 @@ jobs:
 
       - name: Build libVA
         run: |
-          git clone https://github.com/intel/libva.git "$VENDOR/libva" --depth=1 --revision="$LIBVA_VERSION"
+          git init "$VENDOR/libva"
+          git -C "$VENDOR/libva" fetch https://github.com/intel/libva.git "$LIBVA_VERSION" --depth=1
+          git -C "$VENDOR/libva" checkout FETCH_HEAD
           cd "$VENDOR/libva"
 
           ./autogen.sh \
@@ -198,7 +213,9 @@ jobs:
 
       - name: Download and install ffnvcodec-headers
         run: |
-          git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$VENDOR/ffnvcodec-headers" --depth=1 --revision="$NVCODEC_VERSION"
+          git init "$VENDOR/ffnvcodec-headers"
+          git -C "$VENDOR/ffnvcodec-headers" fetch https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$NVCODEC_VERSION" --depth=1
+          git -C "$VENDOR/ffnvcodec-headers" checkout FETCH_HEAD
           cd "$VENDOR/ffnvcodec-headers"
 
           make PREFIX="$PREFIX"
@@ -206,7 +223,9 @@ jobs:
 
       - name: Download and install vulkan-headers
         run: |
-          git clone https://github.com/KhronosGroup/Vulkan-Headers.git "$VENDOR/vulkan-headers" --depth=1 --revision="$VULKAN_VERSION"
+          git init "$VENDOR/vulkan-headers"
+          git -C "$VENDOR/vulkan-headers" fetch https://github.com/KhronosGroup/Vulkan-Headers.git "$VULKAN_VERSION" --depth=1
+          git -C "$VENDOR/vulkan-headers" checkout FETCH_HEAD
           cd "$VENDOR/vulkan-headers"
 
           cmake -S . -B build -G Ninja \
@@ -220,7 +239,9 @@ jobs:
 
       - name: Build FFmpeg
         run: |
-          git clone https://git.ffmpeg.org/ffmpeg.git "$VENDOR/ffmpeg" --depth=1 --revision="$FFMPEG_VERSION"
+          git init "$VENDOR/ffmpeg"
+          git -C "$VENDOR/ffmpeg" fetch https://git.ffmpeg.org/ffmpeg.git "$FFMPEG_VERSION" --depth=1
+          git -C "$VENDOR/ffmpeg" checkout FETCH_HEAD
           cd "$VENDOR/ffmpeg"
 
           ./configure \
