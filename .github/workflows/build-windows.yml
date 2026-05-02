@@ -68,28 +68,29 @@ jobs:
             mingw-w64-${{ matrix.msys2_env }}-cc
             mingw-w64-${{ matrix.msys2_env }}-make
 
-      - name: Install dependencies
-        run: |
-          choco install -y cmake ninja
-
       - name: Prepare build directories
         run: |
           mkdir -p "$env:VENDOR" "$env:PREFIX"
 
       - name: Build x264
-        shell: cmd
+        shell: msys2 {0}
         run: |
           git init "%VENDOR%\x264"
           cd "%VENDOR%\x264"
           git fetch https://code.videolan.org/videolan/x264.git %X264_REVISION% --depth=1
           git checkout FETCH_HEAD
 
-          ./configure --prefix="%PREFIX%" --enable-static --enable-pic --disable-opencl --disable-cli --host=${{ matrix.arch }}-w64-mingw32
-          make -j%NUMBER_OF_PROCESSORS%
-          make install
+          ./configure \
+            --prefix="%PREFIX%" \
+            --enable-static \
+            --enable-pic \
+            --disable-opencl \
+            --disable-cli
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make install
 
       - name: Build libvpx
-        shell: cmd
+        shell: msys2 {0}
         run: |
           git init "%VENDOR%\libvpx"
           cd "%VENDOR%\libvpx"
@@ -97,9 +98,16 @@ jobs:
           git checkout FETCH_HEAD
 
           set LIBVPX_TARGET=${{ matrix.arch == 'x86' && 'x86-win32-vs16' || 'x86_64-win64-vs16' }}
-          call configure --prefix="%PREFIX%" --target=!LIBVPX_TARGET! --enable-vp8 --enable-vp9 --enable-static --disable-examples --disable-unit-tests
-          make -j%NUMBER_OF_PROCESSORS%
-          make install
+          ./configure \
+            --prefix="%PREFIX%" \
+            --target=!LIBVPX_TARGET! \
+            --enable-vp8 \
+            --enable-vp9 \
+            --enable-static \
+            --disable-examples \
+            --disable-unit-tests
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make install
 
       - name: Build SVT-AV1
         run: |
@@ -108,44 +116,47 @@ jobs:
           git fetch https://gitlab.com/AOMediaCodec/SVT-AV1 "$env:SVTAV1_VERSION" --depth=1
           git checkout FETCH_HEAD
 
-          cmake -S . -B build -G Ninja `
-            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" `
-            -DNATIVE=OFF `
-            -DBUILD_SHARED_LIBS=OFF `
-            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL `
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" \
+            -DNATIVE=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           cmake --install build
 
       - name: Build LAME
-        shell: cmd
+        shell: msys2 {0}
         run: |
-          if not exist "%VENDOR%\lame-%LAME_VERSION%.tar.gz" (
-            cd /d "%VENDOR%"
-            curl -L -O https://deac-ams.dl.sourceforge.net/project/lame/lame/%LAME_VERSION%/lame-%LAME_VERSION%.tar.gz
-          )
           cd /d "%VENDOR%"
+          curl -L -O https://deac-ams.dl.sourceforge.net/project/lame/lame/%LAME_VERSION%/lame-%LAME_VERSION%.tar.gz
+
           tar xf lame-%LAME_VERSION%.tar.gz
           cd lame-%LAME_VERSION%
 
-          call configure --prefix="%PREFIX%" --enable-static --disable-shared --host=${{ matrix.arch }}-w64-mingw32
-          make -j%NUMBER_OF_PROCESSORS%
-          make install
+          ./configure \
+            --prefix="%PREFIX%" \
+            --enable-static \
+            --disable-shared
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make install
 
       - name: Build OPUS
-        shell: cmd
+        shell: msys2 {0}
         run: |
-          if not exist "%VENDOR%\opus-%OPUS_VERSION%.tar.gz" (
-            cd /d "%VENDOR%"
-            curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
-          )
           cd /d "%VENDOR%"
+          curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
+
           tar xf opus-%OPUS_VERSION%.tar.gz
           cd opus-%OPUS_VERSION%
 
-          call configure --prefix="%PREFIX%" --enable-custom-modes --enable-static --disable-shared --host=${{ matrix.arch }}-w64-mingw32
-          make -j%NUMBER_OF_PROCESSORS%
-          make install
+          ./configure \
+            --prefix="%PREFIX%" \
+            --enable-custom-modes \
+            --enable-static \
+            --disable-shared
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make install
 
       - name: Build OGG
         run: |
@@ -154,34 +165,39 @@ jobs:
           git fetch https://github.com/xiph/ogg.git "$env:OGG_VERSION" --depth=1
           git checkout FETCH_HEAD
 
-          cmake -S . -B build -G Ninja `
-            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" `
-            -DBUILD_SHARED_LIBS=OFF `
-            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL `
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           cmake --install build
 
       - name: Build Vorbis
-        shell: cmd
+        shell: msys2 {0}
         run: |
           git init "%VENDOR%\vorbis"
           cd "%VENDOR%\vorbis"
           git fetch https://github.com/xiph/vorbis.git %VORBIS_VERSION% --depth=1
           git checkout FETCH_HEAD
 
-          call configure --prefix="%PREFIX%" --enable-static --disable-shared --host=${{ matrix.arch }}-w64-mingw32 --with-ogg="%PREFIX%"
-          make -j%NUMBER_OF_PROCESSORS%
-          make install
+          ./configure \
+            --prefix="%PREFIX%" \
+            --enable-static \
+            --disable-shared
+
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make install
 
       - name: Install ffnvcodec-headers
+        shell: msys2 {0}
         run: |
           git init "$env:VENDOR\ffnvcodec-headers"
           cd "$env:VENDOR\ffnvcodec-headers"
           git fetch https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$env:NVCODEC_VERSION" --depth=1
           git checkout FETCH_HEAD
 
-          make PREFIX="$env:PREFIX" install
+          mingw32-make PREFIX="$env:PREFIX" install
 
       - name: Install vulkan-headers
         run: |
@@ -190,96 +206,96 @@ jobs:
           git fetch https://github.com/KhronosGroup/Vulkan-Headers.git "$env:VULKAN_VERSION" --depth=1
           git checkout FETCH_HEAD
 
-          cmake -S . -B build -G Ninja `
-            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" `
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           cmake --install build
 
       - name: Build FFmpeg
-        shell: cmd
+        shell: msys2 {0}
         run: |
           git init "%VENDOR%\ffmpeg"
           cd "%VENDOR%\ffmpeg"
           git fetch https://git.ffmpeg.org/ffmpeg.git %FFMPEG_VERSION% --depth=1
           git checkout FETCH_HEAD
 
-          call configure ^
-            --prefix="%PREFIX%" ^
-            --disable-autodetect ^
-            --disable-everything ^
-            --enable-gpl ^
-            --enable-muxer=mp4 ^
-            --enable-muxer=matroska ^
-            --enable-muxer=mov ^
-            --enable-muxer=webm ^
-            --enable-libx264 ^
-            --enable-encoder=libx264 ^
-            --enable-encoder=libx264rgb ^
-            --enable-parser=h264 ^
-            --enable-parser=hevc ^
-            --enable-libvpx ^
-            --enable-encoder=libvpx_vp8 ^
-            --enable-parser=vp8 ^
-            --enable-encoder=libvpx_vp9 ^
-            --enable-parser=vp9 ^
-            --enable-libsvtav1 ^
-            --enable-encoder=libsvtav1 ^
-            --enable-parser=av1 ^
-            --enable-libmp3lame ^
-            --enable-encoder=aac ^
-            --enable-encoder=libmp3lame ^
-            --enable-parser=aac ^
-            --enable-parser=mpegaudio ^
-            --enable-encoder=flac ^
-            --enable-parser=flac ^
-            --enable-libopus ^
-            --enable-encoder=libopus ^
-            --enable-parser=opus ^
-            --enable-libvorbis ^
-            --enable-encoder=libvorbis ^
-            --enable-parser=vorbis ^
-            --enable-decoder=rawvideo ^
-            --enable-demuxer=rawvideo ^
-            --enable-decoder=pcm_s16le ^
-            --enable-demuxer=pcm_s16le ^
-            --enable-bsf=h264_mp4toannexb ^
-            --enable-bsf=aac_adtstoasc ^
-            --enable-filter=format ^
-            --enable-filter=hwupload ^
-            --enable-filter=scale ^
-            --enable-protocol=pipe ^
-            --enable-protocol=file ^
-            --enable-pthreads ^
-            --enable-ffnvcodec ^
-            --enable-nvenc ^
-            --enable-encoder=h264_nvenc ^
-            --enable-encoder=hevc_nvenc ^
-            --enable-vulkan ^
-            --enable-ffmpeg ^
-            --enable-avcodec ^
-            --enable-avformat ^
-            --enable-avutil ^
-            --enable-swscale ^
-            --enable-swscale-alpha ^
-            --enable-swresample ^
-            --disable-ffplay ^
-            --disable-ffprobe ^
-            --disable-debug ^
-            --disable-doc ^
-            --disable-htmlpages ^
-            --disable-manpages ^
-            --disable-podpages ^
-            --disable-txtpages ^
-            --enable-shared ^
-            --disable-static ^
-            --disable-asm ^
-            --toolchain=msvc ^
-            --extra-cflags="-I%PREFIX%\include" ^
-            --extra-ldflags="-L%PREFIX%\lib" ^
+          ./configure \
+            --prefix="%PREFIX%" \
+            --disable-autodetect \
+            --disable-everything \
+            --enable-gpl \
+            --enable-muxer=mp4 \
+            --enable-muxer=matroska \
+            --enable-muxer=mov \
+            --enable-muxer=webm \
+            --enable-libx264 \
+            --enable-encoder=libx264 \
+            --enable-encoder=libx264rgb \
+            --enable-parser=h264 \
+            --enable-parser=hevc \
+            --enable-libvpx \
+            --enable-encoder=libvpx_vp8 \
+            --enable-parser=vp8 \
+            --enable-encoder=libvpx_vp9 \
+            --enable-parser=vp9 \
+            --enable-libsvtav1 \
+            --enable-encoder=libsvtav1 \
+            --enable-parser=av1 \
+            --enable-libmp3lame \
+            --enable-encoder=aac \
+            --enable-encoder=libmp3lame \
+            --enable-parser=aac \
+            --enable-parser=mpegaudio \
+            --enable-encoder=flac \
+            --enable-parser=flac \
+            --enable-libopus \
+            --enable-encoder=libopus \
+            --enable-parser=opus \
+            --enable-libvorbis \
+            --enable-encoder=libvorbis \
+            --enable-parser=vorbis \
+            --enable-decoder=rawvideo \
+            --enable-demuxer=rawvideo \
+            --enable-decoder=pcm_s16le \
+            --enable-demuxer=pcm_s16le \
+            --enable-bsf=h264_mp4toannexb \
+            --enable-bsf=aac_adtstoasc \
+            --enable-filter=format \
+            --enable-filter=hwupload \
+            --enable-filter=scale \
+            --enable-protocol=pipe \
+            --enable-protocol=file \
+            --enable-pthreads \
+            --enable-ffnvcodec \
+            --enable-nvenc \
+            --enable-encoder=h264_nvenc \
+            --enable-encoder=hevc_nvenc \
+            --enable-vulkan \
+            --enable-ffmpeg \
+            --enable-avcodec \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-swscale \
+            --enable-swscale-alpha \
+            --enable-swresample \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --disable-debug \
+            --disable-doc \
+            --disable-htmlpages \
+            --disable-manpages \
+            --disable-podpages \
+            --disable-txtpages \
+            --enable-shared \
+            --disable-static \
+            --disable-asm \
+            --toolchain=msvc \
+            --extra-cflags="-I%PREFIX%\include" \
+            --extra-ldflags="-L%PREFIX%\lib" \
             --extra-libs="kernel32.lib"
-          make -j%NUMBER_OF_PROCESSORS%
-          make install
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          mingw32-make install
 
       - name: Create archive
         run: |
@@ -306,6 +322,7 @@ jobs:
           )
 
           foreach ($file in $files) {
+            Get-FileHash $file -ErrorAction SilentlyContinue
             Get-Item $file -ErrorAction SilentlyContinue | Copy-Item -Destination .
           }
 
