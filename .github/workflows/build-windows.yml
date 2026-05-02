@@ -1,0 +1,322 @@
+name: Build Windows
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: Windows x86
+            arch: x86
+            msvc_arch: x86
+            msys2_system: mingw32
+            msys2_env: i686
+            platform: win32
+          - name: Windows x64
+            arch: x64
+            msvc_arch: x64
+            msys2_system: mingw64
+            msys2_env: x86_64
+            platform: x64
+
+    name: Build FFmpeg (${{ matrix.name}})
+    runs-on: windows-latest
+
+    env:
+      VENDOR: ${{ github.workspace }}\vendor
+      PREFIX: ${{ github.workspace }}\install
+
+      OPUS_VERSION: 1.6.1
+      OPUS_SHA256: 6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1
+
+      LAME_VERSION: "3.100"
+      LAME_SHA256: ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e
+
+      X264_REVISION: b35605ace3ddf7c1a5d67a2eb553f034aef41d55
+      LIBVPX_VERSION: v1.16.0
+      SVTAV1_VERSION: v4.1.0
+      OGG_VERSION: v1.3.6
+      VORBIS_VERSION: v1.3.7
+      NVCODEC_VERSION: n13.0.19.0
+      VULKAN_VERSION: vulkan-sdk-1.4.341.0
+      FFMPEG_VERSION: n8.1
+
+      PKG_CONFIG_PATH: ${{ github.workspace }}\install\lib\pkgconfig
+
+    steps:
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msys2_env == 'x86_64' && 'x64' || 'x86' }}
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@master
+
+      - name: Set up Ninja
+        uses: turtlesec-no/get-ninja@main
+
+      - name: Set up NASM
+        uses: ilammy/setup-nasm@v1
+      
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msys2_system }}
+          install: >-
+            mingw-w64-${{ matrix.msys2_env }}-cc
+            mingw-w64-${{ matrix.msys2_env }}-make
+
+      - name: Install dependencies
+        run: |
+          choco install -y cmake ninja
+
+      - name: Prepare build directories
+        run: |
+          mkdir -p "$env:VENDOR" "$env:PREFIX"
+
+      - name: Build x264
+        shell: cmd
+        run: |
+          git init "%VENDOR%\x264"
+          cd "%VENDOR%\x264"
+          git fetch https://code.videolan.org/videolan/x264.git %X264_REVISION% --depth=1
+          git checkout FETCH_HEAD
+
+          ./configure --prefix="%PREFIX%" --enable-static --enable-pic --disable-opencl --disable-cli --host=${{ matrix.arch }}-w64-mingw32
+          make -j%NUMBER_OF_PROCESSORS%
+          make install
+
+      - name: Build libvpx
+        shell: cmd
+        run: |
+          git init "%VENDOR%\libvpx"
+          cd "%VENDOR%\libvpx"
+          git fetch https://chromium.googlesource.com/webm/libvpx %LIBVPX_VERSION% --depth=1
+          git checkout FETCH_HEAD
+
+          set LIBVPX_TARGET=${{ matrix.arch == 'x86' && 'x86-win32-vs16' || 'x86_64-win64-vs16' }}
+          call configure --prefix="%PREFIX%" --target=!LIBVPX_TARGET! --enable-vp8 --enable-vp9 --enable-static --disable-examples --disable-unit-tests
+          make -j%NUMBER_OF_PROCESSORS%
+          make install
+
+      - name: Build SVT-AV1
+        run: |
+          git init "$env:VENDOR\SVT-AV1"
+          cd "$env:VENDOR\SVT-AV1"
+          git fetch https://gitlab.com/AOMediaCodec/SVT-AV1 "$env:SVTAV1_VERSION" --depth=1
+          git checkout FETCH_HEAD
+
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" `
+            -DNATIVE=OFF `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL `
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          cmake --install build
+
+      - name: Build LAME
+        shell: cmd
+        run: |
+          if not exist "%VENDOR%\lame-%LAME_VERSION%.tar.gz" (
+            cd /d "%VENDOR%"
+            curl -L -O https://deac-ams.dl.sourceforge.net/project/lame/lame/%LAME_VERSION%/lame-%LAME_VERSION%.tar.gz
+          )
+          cd /d "%VENDOR%"
+          tar xf lame-%LAME_VERSION%.tar.gz
+          cd lame-%LAME_VERSION%
+
+          call configure --prefix="%PREFIX%" --enable-static --disable-shared --host=${{ matrix.arch }}-w64-mingw32
+          make -j%NUMBER_OF_PROCESSORS%
+          make install
+
+      - name: Build OPUS
+        shell: cmd
+        run: |
+          if not exist "%VENDOR%\opus-%OPUS_VERSION%.tar.gz" (
+            cd /d "%VENDOR%"
+            curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
+          )
+          cd /d "%VENDOR%"
+          tar xf opus-%OPUS_VERSION%.tar.gz
+          cd opus-%OPUS_VERSION%
+
+          call configure --prefix="%PREFIX%" --enable-custom-modes --enable-static --disable-shared --host=${{ matrix.arch }}-w64-mingw32
+          make -j%NUMBER_OF_PROCESSORS%
+          make install
+
+      - name: Build OGG
+        run: |
+          git init "$env:VENDOR\ogg"
+          cd "$env:VENDOR\ogg"
+          git fetch https://github.com/xiph/ogg.git "$env:OGG_VERSION" --depth=1
+          git checkout FETCH_HEAD
+
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL `
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          cmake --install build
+
+      - name: Build Vorbis
+        shell: cmd
+        run: |
+          git init "%VENDOR%\vorbis"
+          cd "%VENDOR%\vorbis"
+          git fetch https://github.com/xiph/vorbis.git %VORBIS_VERSION% --depth=1
+          git checkout FETCH_HEAD
+
+          call configure --prefix="%PREFIX%" --enable-static --disable-shared --host=${{ matrix.arch }}-w64-mingw32 --with-ogg="%PREFIX%"
+          make -j%NUMBER_OF_PROCESSORS%
+          make install
+
+      - name: Install ffnvcodec-headers
+        run: |
+          git init "$env:VENDOR\ffnvcodec-headers"
+          cd "$env:VENDOR\ffnvcodec-headers"
+          git fetch https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$env:NVCODEC_VERSION" --depth=1
+          git checkout FETCH_HEAD
+
+          make PREFIX="$env:PREFIX" install
+
+      - name: Install vulkan-headers
+        run: |
+          git init "$env:VENDOR\vulkan-headers"
+          cd "$env:VENDOR\vulkan-headers"
+          git fetch https://github.com/KhronosGroup/Vulkan-Headers.git "$env:VULKAN_VERSION" --depth=1
+          git checkout FETCH_HEAD
+
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_INSTALL_PREFIX="$env:PREFIX" `
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          cmake --install build
+
+      - name: Build FFmpeg
+        shell: cmd
+        run: |
+          git init "%VENDOR%\ffmpeg"
+          cd "%VENDOR%\ffmpeg"
+          git fetch https://git.ffmpeg.org/ffmpeg.git %FFMPEG_VERSION% --depth=1
+          git checkout FETCH_HEAD
+
+          call configure ^
+            --prefix="%PREFIX%" ^
+            --disable-autodetect ^
+            --disable-everything ^
+            --enable-gpl ^
+            --enable-muxer=mp4 ^
+            --enable-muxer=matroska ^
+            --enable-muxer=mov ^
+            --enable-muxer=webm ^
+            --enable-libx264 ^
+            --enable-encoder=libx264 ^
+            --enable-encoder=libx264rgb ^
+            --enable-parser=h264 ^
+            --enable-parser=hevc ^
+            --enable-libvpx ^
+            --enable-encoder=libvpx_vp8 ^
+            --enable-parser=vp8 ^
+            --enable-encoder=libvpx_vp9 ^
+            --enable-parser=vp9 ^
+            --enable-libsvtav1 ^
+            --enable-encoder=libsvtav1 ^
+            --enable-parser=av1 ^
+            --enable-libmp3lame ^
+            --enable-encoder=aac ^
+            --enable-encoder=libmp3lame ^
+            --enable-parser=aac ^
+            --enable-parser=mpegaudio ^
+            --enable-encoder=flac ^
+            --enable-parser=flac ^
+            --enable-libopus ^
+            --enable-encoder=libopus ^
+            --enable-parser=opus ^
+            --enable-libvorbis ^
+            --enable-encoder=libvorbis ^
+            --enable-parser=vorbis ^
+            --enable-decoder=rawvideo ^
+            --enable-demuxer=rawvideo ^
+            --enable-decoder=pcm_s16le ^
+            --enable-demuxer=pcm_s16le ^
+            --enable-bsf=h264_mp4toannexb ^
+            --enable-bsf=aac_adtstoasc ^
+            --enable-filter=format ^
+            --enable-filter=hwupload ^
+            --enable-filter=scale ^
+            --enable-protocol=pipe ^
+            --enable-protocol=file ^
+            --enable-pthreads ^
+            --enable-ffnvcodec ^
+            --enable-nvenc ^
+            --enable-encoder=h264_nvenc ^
+            --enable-encoder=hevc_nvenc ^
+            --enable-vulkan ^
+            --enable-ffmpeg ^
+            --enable-avcodec ^
+            --enable-avformat ^
+            --enable-avutil ^
+            --enable-swscale ^
+            --enable-swscale-alpha ^
+            --enable-swresample ^
+            --disable-ffplay ^
+            --disable-ffprobe ^
+            --disable-debug ^
+            --disable-doc ^
+            --disable-htmlpages ^
+            --disable-manpages ^
+            --disable-podpages ^
+            --disable-txtpages ^
+            --enable-shared ^
+            --disable-static ^
+            --disable-asm ^
+            --toolchain=msvc ^
+            --extra-cflags="-I%PREFIX%\include" ^
+            --extra-ldflags="-L%PREFIX%\lib" ^
+            --extra-libs="kernel32.lib"
+          make -j%NUMBER_OF_PROCESSORS%
+          make install
+
+      - name: Create archive
+        run: |
+          mkdir -p package
+          cd package
+
+          $files = @(
+            "$env:PREFIX\bin\ffmpeg.exe",
+            "$env:PREFIX\bin\avcodec-*.dll",
+            "$env:PREFIX\bin\avdevice-*.dll",
+            "$env:PREFIX\bin\avfilter-*.dll",
+            "$env:PREFIX\bin\avformat-*.dll",
+            "$env:PREFIX\bin\avutil-*.dll",
+            "$env:PREFIX\bin\swresample-*.dll",
+            "$env:PREFIX\bin\swscale-*.dll",
+            "$env:PREFIX\bin\x264-*.dll",
+            "$env:PREFIX\bin\libvpx.dll",
+            "$env:PREFIX\bin\SvtAv1Enc.dll",
+            "$env:PREFIX\bin\mp3lame.dll",
+            "$env:PREFIX\bin\libopus.dll",
+            "$env:PREFIX\bin\libvorbis.dll",
+            "$env:PREFIX\bin\libvorbisenc.dll",
+            "$env:PREFIX\bin\ogg.dll"
+          )
+
+          foreach ($file in $files) {
+            Get-Item $file -ErrorAction SilentlyContinue | Copy-Item -Destination .
+          }
+
+          $arch = "${{ matrix.arch }}"
+          Compress-Archive -Path * -DestinationPath "ffmpeg-windows-$arch.zip"
+
+          Get-FileHash ffmpeg.exe
+          Get-FileHash "ffmpeg-windows-$arch.zip"
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          path: package/ffmpeg-windows-${{ matrix.arch }}.zip
+          archive: false

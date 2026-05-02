@@ -1,4 +1,4 @@
-name: Build FFmpeg
+name: Build Linux
 
 on:
   workflow_dispatch: {}
@@ -371,9 +371,9 @@ jobs:
       - name: Create archive
         run: |
           mkdir -p package
-          cd package
+          cp libffmpeg.so "$PREFIX/bin/ffmpeg" package
 
-          cp libffmpeg.so "$PREFIX/bin/ffmpeg" .
+          cd package
           zip ffmpeg-linux-x86_64.zip libffmpeg.so ffmpeg
 
           md5sum ffmpeg
