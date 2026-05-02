@@ -9,8 +9,8 @@ jobs:
     container:
       image: debian:buster-slim
     env:
-      VENDOR: ${{ github.workspace }}/vendor-musl
-      PREFIX: ${{ github.workspace }}/install-musl
+      VENDOR: ${{ github.workspace }}/vendor
+      PREFIX: ${{ github.workspace }}/install
 
       OPUS_VERSION: 1.6.1
       OPUS_SHA256: 6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1
@@ -28,6 +28,12 @@ jobs:
       NVCODEC_VERSION: n13.0.19.0
       VULKAN_VERSION: vulkan-sdk-1.4.341.0
       FFMPEG_VERSION: n8.1
+
+      CC: gcc
+      CFLAGS: -fPIC
+
+      PKG_CONFIG_PATH: ${{ env.PREFIX }}/lib/pkgconfig
+      PKG_CONFIG: pkg-config --static
 
     steps:
       - name: Install build dependencies
@@ -94,6 +100,20 @@ jobs:
             -Dvalgrind=disabled
           ninja -C build
           ninja -C build install
+
+      - name: Build libVA
+        run: |
+          git init "$VENDOR/libva"
+          git -C "$VENDOR/libva" fetch https://github.com/intel/libva.git "$LIBVA_VERSION" --depth=1
+          git -C "$VENDOR/libva" checkout FETCH_HEAD
+          cd "$VENDOR/libva"
+
+          ./autogen.sh \
+            --prefix="$PREFIX" \
+            --enable-static \
+            --disable-shared
+          make -j$(nproc)
+          make install
 
       - name: Build x264
         run: |
@@ -203,20 +223,6 @@ jobs:
             --prefix="$PREFIX" \
             --enable-static \
             --enable-pic \
-            --disable-shared
-          make -j$(nproc)
-          make install
-
-      - name: Build libVA
-        run: |
-          git init "$VENDOR/libva"
-          git -C "$VENDOR/libva" fetch https://github.com/intel/libva.git "$LIBVA_VERSION" --depth=1
-          git -C "$VENDOR/libva" checkout FETCH_HEAD
-          cd "$VENDOR/libva"
-
-          ./autogen.sh \
-            --prefix="$PREFIX" \
-            --enable-static \
             --disable-shared
           make -j$(nproc)
           make install
