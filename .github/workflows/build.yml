@@ -32,7 +32,7 @@ jobs:
       CC: gcc
       CFLAGS: -fPIC
 
-      PKG_CONFIG_PATH: ${{ github.workspace }}/install/lib/pkgconfig
+      PKG_CONFIG_PATH: ${{ github.workspace }}/install/lib/x86_64-linux-gnu/pkgconfig
       PKG_CONFIG: pkg-config --static
 
     steps:
