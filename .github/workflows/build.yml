@@ -37,6 +37,7 @@ jobs:
 
           apt-get update
           apt-get install -y --no-install-recommends \
+            coreutils \
             build-essential \
             gcc \
             g++ \
