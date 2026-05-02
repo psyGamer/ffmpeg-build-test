@@ -67,7 +67,6 @@ jobs:
           # Setup Debian Bookwork PPA for newer Meson version
           echo "deb http://deb.debian.org/debian bookworm main" >> /etc/apt/sources.list
           echo "deb http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list
-          echo "deb http://archive.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
           cat <<EOF > /etc/apt/preferences.d/bookworm
           Package: *
           Pin: release n=bookworm
