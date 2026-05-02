@@ -109,7 +109,7 @@ jobs:
 
           # Fix not linking C++ standard library
           cat $PREFIX/lib/pkgconfig/vpl.pc
-          sed -i 's/^Libs: -L\${libdir} -lvpl -ldl$/Libs: -L${libdir} -lvpl -ldl -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
+          sed -i 's/-ldl/-ldl -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
           cat $PREFIX/lib/pkgconfig/vpl.pc
 
       - name: Build x264
