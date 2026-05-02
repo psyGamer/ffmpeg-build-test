@@ -41,18 +41,29 @@ jobs:
             build-essential \
             gcc \
             g++ \
-            git \
             curl \
             ca-certificates \
             pkg-config \
             libtool-bin \
             autoconf \
             automake \
-            cmake \
             ninja-build \
             meson \
             yasm \
             nasm
+
+          # Setup Debian Bullseye PPA for newer Git and CMake versions
+          echo "deb http://deb.debian.org/debian bullseye main" >> /etc/apt/sources.list
+          echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
+          echo "deb http://archive.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
+          cat <<EOF > /etc/apt/preferences.d/bullseye
+          Package: *
+          Pin: release n=bullseye
+          Pin-Priority: 100
+          EOF
+
+          apt-get update
+          apt-get install -y -t bullseye git cmake
 
       - name: Prepare build directories
         run: |
