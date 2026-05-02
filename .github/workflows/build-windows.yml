@@ -77,30 +77,30 @@ jobs:
         run: |
           cd "%VENDOR%"
 
-          git clone https://code.videolan.org/videolan/x264.git --revision="%X264_REVISION%" --depth=1
-          git clone https://chromium.googlesource.com/webm/libvpx --revision="%LIBVPX_VERSION%" --depth=1
-          git clone https://gitlab.com/AOMediaCodec/SVT-AV1 --revision="%SVTAV1_VERSION%" --depth=1
+          git clone https://code.videolan.org/videolan/x264.git --revision="${{ env.X264_REVISION }}" --depth=1
+          git clone https://chromium.googlesource.com/webm/libvpx --revision="${{ env.LIBVPX_VERSION }}" --depth=1
+          git clone https://gitlab.com/AOMediaCodec/SVT-AV1 --revision="${{ env.SVTAV1_VERSION }}" --depth=1
 
-          curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
-          tar xf opus-%OPUS_VERSION%.tar.gz
+          curl -L -O https://downloads.xiph.org/releases/opus/opus-${{ env.OPUS_VERSION }}.tar.gz
+          tar xf opus-${{ env.OPUS_VERSION }}.tar.gz
 
-          curl -L -O https://deac-ams.dl.sourceforge.net/project/lame/lame/%LAME_VERSION%/lame-%LAME_VERSION%.tar.gz
-          tar xf lame-%LAME_VERSION%.tar.gz
-        
-          git clone https://github.com/xiph/ogg.git --revision="%OGG_VERSION%" --depth=1
-          git clone https://github.com/xiph/vorbis.git --revision="%VORBIS_VERSION%" --depth=1
+          curl -L -O https://deac-ams.dl.sourceforge.net/project/lame/lame/${{ env.LAME_VERSION }}/lame-${{ env.LAME_VERSION }}.tar.gz
+          tar xf lame-${{ env.LAME_VERSION }}.tar.gz
 
-          git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git --revision="%NVCODEC_VERSION%" --depth=1
-          git clone https://github.com/KhronosGroup/Vulkan-Headers.git --revision="%VULKAN_VERSION%" --depth=1
+          git clone https://github.com/xiph/ogg.git --revision="${{ env.OGG_VERSION }}" --depth=1
+          git clone https://github.com/xiph/vorbis.git --revision="${{ env.VORBIS_VERSION }}" --depth=1
 
-          git clone https://git.ffmpeg.org/ffmpeg.git --revision="%FFMPEG_VERSION%" --depth=1
+          git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git --revision="${{ env.NVCODEC_VERSION }}" --depth=1
+          git clone https://github.com/KhronosGroup/Vulkan-Headers.git --revision="${{ env.VULKAN_VERSION }}" --depth=1
+
+          git clone https://git.ffmpeg.org/ffmpeg.git --revision="${{ env.FFMPEG_VERSION }}" --depth=1
 
       - name: Build x264
         working-directory: ${{ env.VENDOR }}\x264
         shell: msys2 {0}
         run: |
           ./configure \
-            --prefix="%PREFIX%" \
+            --prefix="${{ env.PREFIX }}" \
             --enable-static \
             --enable-pic \
             --disable-opencl \
@@ -114,7 +114,7 @@ jobs:
         run: |
           set LIBVPX_TARGET=${{ matrix.arch == 'x86' && 'x86-win32-vs16' || 'x86_64-win64-vs16' }}
           ./configure \
-            --prefix="%PREFIX%" \
+            --prefix="${{ env.PREFIX }}" \
             --target=!LIBVPX_TARGET! \
             --enable-vp8 \
             --enable-vp9 \
@@ -128,7 +128,7 @@ jobs:
         working-directory: ${{ env.VENDOR }}\SVT-AV1
         run: |
           cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
+            -DCMAKE_INSTALL_PREFIX="${{ env.PREFIX }}" \
             -DNATIVE=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" \
@@ -141,7 +141,7 @@ jobs:
         shell: msys2 {0}
         run: |
           ./configure \
-            --prefix="%PREFIX%" \
+            --prefix="${{ env.PREFIX }}" \
             --enable-static \
             --disable-shared
           mingw32-make -j%NUMBER_OF_PROCESSORS%
@@ -152,7 +152,7 @@ jobs:
         shell: msys2 {0}
         run: |
           ./configure \
-            --prefix="%PREFIX%" \
+            --prefix="${{ env.PREFIX }}" \
             --enable-custom-modes \
             --enable-static \
             --disable-shared
@@ -163,7 +163,7 @@ jobs:
         working-directory: ${{ env.VENDOR }}\ogg
         run: |
           cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
+            -DCMAKE_INSTALL_PREFIX="${{ env.PREFIX }}" \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" \
             -DCMAKE_BUILD_TYPE=Release
@@ -175,7 +175,7 @@ jobs:
         shell: msys2 {0}
         run: |
           ./configure \
-            --prefix="%PREFIX%" \
+            --prefix="${{ env.PREFIX }}" \
             --enable-static \
             --disable-shared
 
@@ -186,13 +186,13 @@ jobs:
         working-directory: ${{ env.VENDOR }}\nv-codec-headers
         shell: msys2 {0}
         run: |
-          mingw32-make PREFIX="%PREFIX%" install
+          mingw32-make PREFIX="${{ env.PREFIX }}" install
 
       - name: Install vulkan-headers
         working-directory: ${{ env.VENDOR }}\Vulkan-Headers
         run: |
           cmake -S . -B build -G Ninja \
-            -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
+            -DCMAKE_INSTALL_PREFIX="${{ env.PREFIX }}" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           cmake --install build
@@ -202,7 +202,7 @@ jobs:
         shell: msys2 {0}
         run: |
           ./configure \
-            --prefix="%PREFIX%" \
+            --prefix="${{ env.PREFIX }}" \
             --disable-autodetect \
             --disable-everything \
             --enable-gpl \
@@ -272,8 +272,8 @@ jobs:
             --disable-static \
             --disable-asm \
             --toolchain=msvc \
-            --extra-cflags="-I%PREFIX%\include" \
-            --extra-ldflags="-L%PREFIX%\lib" \
+            --extra-cflags="-I${{ env.PREFIX }}\include" \
+            --extra-ldflags="-L${{ env.PREFIX }}\lib" \
             --extra-libs="kernel32.lib"
           mingw32-make -j%NUMBER_OF_PROCESSORS%
           mingw32-make install
@@ -284,22 +284,22 @@ jobs:
           cd package
 
           $files = @(
-            "%PREFIX%\bin\ffmpeg.exe",
-            "%PREFIX%\bin\avcodec-*.dll",
-            "%PREFIX%\bin\avdevice-*.dll",
-            "%PREFIX%\bin\avfilter-*.dll",
-            "%PREFIX%\bin\avformat-*.dll",
-            "%PREFIX%\bin\avutil-*.dll",
-            "%PREFIX%\bin\swresample-*.dll",
-            "%PREFIX%\bin\swscale-*.dll",
-            "%PREFIX%\bin\x264-*.dll",
-            "%PREFIX%\bin\libvpx.dll",
-            "%PREFIX%\bin\SvtAv1Enc.dll",
-            "%PREFIX%\bin\mp3lame.dll",
-            "%PREFIX%\bin\libopus.dll",
-            "%PREFIX%\bin\libvorbis.dll",
-            "%PREFIX%\bin\libvorbisenc.dll",
-            "%PREFIX%\bin\ogg.dll"
+            "${{ env.PREFIX }}\bin\ffmpeg.exe",
+            "${{ env.PREFIX }}\bin\avcodec-*.dll",
+            "${{ env.PREFIX }}\bin\avdevice-*.dll",
+            "${{ env.PREFIX }}\bin\avfilter-*.dll",
+            "${{ env.PREFIX }}\bin\avformat-*.dll",
+            "${{ env.PREFIX }}\bin\avutil-*.dll",
+            "${{ env.PREFIX }}\bin\swresample-*.dll",
+            "${{ env.PREFIX }}\bin\swscale-*.dll",
+            "${{ env.PREFIX }}\bin\x264-*.dll",
+            "${{ env.PREFIX }}\bin\libvpx.dll",
+            "${{ env.PREFIX }}\bin\SvtAv1Enc.dll",
+            "${{ env.PREFIX }}\bin\mp3lame.dll",
+            "${{ env.PREFIX }}\bin\libopus.dll",
+            "${{ env.PREFIX }}\bin\libvorbis.dll",
+            "${{ env.PREFIX }}\bin\libvorbisenc.dll",
+            "${{ env.PREFIX }}\bin\ogg.dll"
           )
 
           foreach ($file in $files) {
