@@ -42,7 +42,6 @@ jobs:
             git \
             gcc \
             g++ \
-            curl \
             ca-certificates \
             pkg-config \
             libtool-bin \
@@ -53,7 +52,7 @@ jobs:
             yasm \
             nasm
 
-          # Setup Debian Bullseye PPA for newer CMake version
+          # Setup Debian Bullseye PPA for newer cURL and CMake versions
           echo "deb http://deb.debian.org/debian bullseye main" >> /etc/apt/sources.list
           echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
           echo "deb http://archive.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
@@ -64,7 +63,7 @@ jobs:
           EOF
 
           apt-get update
-          apt-get install -y -t bullseye cmake
+          apt-get install -y -t bullseye curl cmake
 
       - name: Prepare build directories
         run: |
@@ -211,7 +210,7 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Download and install ffnvcodec-headers
+      - name: Install ffnvcodec-headers
         run: |
           git init "$VENDOR/ffnvcodec-headers"
           git -C "$VENDOR/ffnvcodec-headers" fetch https://git.videolan.org/git/ffmpeg/nv-codec-headers.git "$NVCODEC_VERSION" --depth=1
@@ -221,7 +220,7 @@ jobs:
           make PREFIX="$PREFIX"
           make PREFIX="$PREFIX" install
 
-      - name: Download and install vulkan-headers
+      - name: Install vulkan-headers
         run: |
           git init "$VENDOR/vulkan-headers"
           git -C "$VENDOR/vulkan-headers" fetch https://github.com/KhronosGroup/Vulkan-Headers.git "$VULKAN_VERSION" --depth=1
