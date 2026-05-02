@@ -69,6 +69,7 @@ jobs:
             mingw-w64-${{ matrix.msys2_env }}-make
 
       - name: Prepare build directories
+        shell: msys2 {0}
         run: |
           mkdir -p "$env:VENDOR" "$env:PREFIX"
 
