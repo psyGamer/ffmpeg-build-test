@@ -75,7 +75,7 @@ jobs:
 
       - name: Download dependencies
         run: |
-          cd /d "%VENDOR%"
+          cd "%VENDOR%"
 
           git clone https://code.videolan.org/videolan/x264.git --revision="%X264_REVISION%" --depth=1
           git clone https://chromium.googlesource.com/webm/libvpx --revision="%LIBVPX_VERSION%" --depth=1
@@ -83,6 +83,9 @@ jobs:
 
           curl -L -O https://downloads.xiph.org/releases/opus/opus-%OPUS_VERSION%.tar.gz
           tar xf opus-%OPUS_VERSION%.tar.gz
+
+          curl -L -O https://deac-ams.dl.sourceforge.net/project/lame/lame/%LAME_VERSION%/lame-%LAME_VERSION%.tar.gz
+          tar xf lame-%LAME_VERSION%.tar.gz
         
           git clone https://github.com/xiph/ogg.git --revision="%OGG_VERSION%" --depth=1
           git clone https://github.com/xiph/vorbis.git --revision="%VORBIS_VERSION%" --depth=1
@@ -93,6 +96,7 @@ jobs:
           git clone https://git.ffmpeg.org/ffmpeg.git --revision="%FFMPEG_VERSION%" --depth=1
 
       - name: Build x264
+        working-directory: ${{ env.VENDOR }}\x264
         shell: msys2 {0}
         run: |
           ./configure \
@@ -105,6 +109,7 @@ jobs:
           mingw32-make install
 
       - name: Build libvpx
+        working-directory: ${{ env.VENDOR }}\libvpx
         shell: msys2 {0}
         run: |
           set LIBVPX_TARGET=${{ matrix.arch == 'x86' && 'x86-win32-vs16' || 'x86_64-win64-vs16' }}
@@ -120,6 +125,7 @@ jobs:
           mingw32-make install
 
       - name: Build SVT-AV1
+        working-directory: ${{ env.VENDOR }}\SVT-AV1
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
@@ -131,6 +137,7 @@ jobs:
           cmake --install build
 
       - name: Build LAME
+        working-directory: ${{ env.VENDOR }}\lame-${{ env.LAME_VERSION }}
         shell: msys2 {0}
         run: |
           ./configure \
@@ -141,6 +148,7 @@ jobs:
           mingw32-make install
 
       - name: Build OPUS
+        working-directory: ${{ env.VENDOR }}\opus-${{ env.OPUS_VERSION }}
         shell: msys2 {0}
         run: |
           ./configure \
@@ -152,6 +160,7 @@ jobs:
           mingw32-make install
 
       - name: Build OGG
+        working-directory: ${{ env.VENDOR }}\ogg
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
@@ -162,6 +171,7 @@ jobs:
           cmake --install build
 
       - name: Build Vorbis
+        working-directory: ${{ env.VENDOR }}\vorbis
         shell: msys2 {0}
         run: |
           ./configure \
@@ -173,11 +183,13 @@ jobs:
           mingw32-make install
 
       - name: Install ffnvcodec-headers
+        working-directory: ${{ env.VENDOR }}\nv-codec-headers
         shell: msys2 {0}
         run: |
           mingw32-make PREFIX="%PREFIX%" install
 
       - name: Install vulkan-headers
+        working-directory: ${{ env.VENDOR }}\Vulkan-Headers
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_INSTALL_PREFIX="%PREFIX%" \
@@ -186,6 +198,7 @@ jobs:
           cmake --install build
 
       - name: Build FFmpeg
+        working-directory: ${{ env.VENDOR }}\ffmpeg
         shell: msys2 {0}
         run: |
           ./configure \
