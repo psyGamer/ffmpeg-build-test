@@ -32,7 +32,7 @@ jobs:
       CC: gcc
       CFLAGS: -fPIC
 
-      PKG_CONFIG_PATH: ${{ github.workspace }}/install/lib/x86_64-linux-gnu/pkgconfig
+      PKG_CONFIG_PATH: ${{ github.workspace }}/install/lib/pkgconfig
       PKG_CONFIG: pkg-config --static
 
     steps:
@@ -57,7 +57,7 @@ jobs:
             yasm \
             nasm
 
-          # Setup Debian Bullseye PPA for newer cURL and CMake versions
+          # Setup Debian Bullseye PPA for newer cURL version
           echo "deb http://deb.debian.org/debian bullseye main" >> /etc/apt/sources.list
           echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
           echo "deb http://archive.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
@@ -70,7 +70,7 @@ jobs:
           apt-get update
           apt-get install -y -t bullseye curl
 
-          # Setup Debian Bookwork PPA for newer cURL, CMake and Meson versio
+          # Setup Debian Bookwork PPA for newer CMake and Meson versions
           echo "deb http://deb.debian.org/debian bookworm main" >> /etc/apt/sources.list
           echo "deb http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list
           cat <<EOF > /etc/apt/preferences.d/bookworm
@@ -96,6 +96,7 @@ jobs:
           meson setup build \
             --default-library=static \
             -Dprefix="$PREFIX" \
+            -Dlibdir="$PREFIX/lib" \
             -Dudev=true \
             -Dvalgrind=disabled
           ninja -C build
