@@ -48,7 +48,6 @@ jobs:
             autoconf \
             automake \
             ninja-build \
-            meson \
             yasm \
             nasm
 
@@ -65,9 +64,37 @@ jobs:
           apt-get update
           apt-get install -y -t bullseye curl cmake
 
+          # Setup Debian Bookwork PPA for newer Meson version
+          echo "deb http://deb.debian.org/debian bookworm main" >> /etc/apt/sources.list
+          echo "deb http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list
+          echo "deb http://archive.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
+          cat <<EOF > /etc/apt/preferences.d/bookworm
+          Package: *
+          Pin: release n=bookworm
+          Pin-Priority: 100
+          EOF
+
+          apt-get update
+          apt-get install -y -t bookworm meson
+
       - name: Prepare build directories
         run: |
           mkdir -p "$VENDOR" "$PREFIX"
+
+      - name: Build libdrm
+        run: |
+          git init "$VENDOR/libdrm"
+          git -C "$VENDOR/libdrm" fetch https://gitlab.freedesktop.org/mesa/libdrm.git "$LIBDRM_REVISION" --depth=1
+          git -C "$VENDOR/libdrm" checkout FETCH_HEAD
+          cd "$VENDOR/libdrm"
+
+          meson setup build \
+            --default-library=static \
+            -Dprefix="$PREFIX" \
+            -Dudev=true \
+            -Dvalgrind=disabled
+          ninja -C build
+          ninja -C build install
 
       - name: Build x264
         run: |
@@ -180,21 +207,6 @@ jobs:
             --disable-shared
           make -j$(nproc)
           make install
-
-      - name: Build libdrm
-        run: |
-          git init "$VENDOR/libdrm"
-          git -C "$VENDOR/libdrm" fetch https://gitlab.freedesktop.org/mesa/libdrm.git "$LIBDRM_REVISION" --depth=1
-          git -C "$VENDOR/libdrm" checkout FETCH_HEAD
-          cd "$VENDOR/libdrm"
-
-          meson setup build \
-            --default-library=static \
-            -Dprefix="$PREFIX" \
-            -Dudev=true \
-            -Dvalgrind=disabled
-          ninja -C build
-          ninja -C build install
 
       - name: Build libVA
         run: |
